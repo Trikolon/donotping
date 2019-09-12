@@ -1,0 +1,14 @@
+{
+  "api": {
+    "appId": "",
+    "token": ""
+  },
+  "database": "sqlite://database.sqlite",
+  "command": {
+    "prefix": "!tping"
+  },
+  "action": {
+    "deleteMessage": false,
+    "reactEmoji": "\uD83D\uDC4E"
+  }
+}
