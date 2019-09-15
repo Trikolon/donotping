@@ -3,27 +3,72 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 const Keyv = require('keyv');
 
-const config = require('./config.json');
+const config = require('../config.json');
 
 let userDB;
 
-async function toggleMention(user) {
-  if (await userDB.get(user.id.toString())) {
-    await userDB.delete(user.id.toString());
-    return false;
+async function getServerSet(user) {
+  if (!user || !(user instanceof Discord.User)) {
+    throw new Error('Invalid arg user');
   }
-  await userDB.set(user.id.toString(), true);
-  return true;
+  const result = await userDB.get(user.id.toString());
+  try {
+    return new Set(JSON.parse(result));
+  } catch (error) {
+    console.warn('Error while parsing database query', error.message);
+    console.debug(error);
+    return new Set();
+  }
+}
+
+function setServerSet(user, serverSet) {
+  if (!user || !(user instanceof Discord.User)) {
+    throw new Error('Invalid arg user');
+  }
+  if (!serverSet || !(serverSet instanceof Set)) {
+    throw new Error('Invalid arg serverSet');
+  }
+  if (serverSet.size === 0) {
+    return userDB.delete(user.id.toString());
+  }
+  return userDB.set(user.id.toString(), JSON.stringify(Array.from(serverSet)));
+}
+
+async function toggleMention(user, guild) {
+  const guildKey = guild.id.toString();
+
+  const serverSet = await getServerSet(user);
+  let enabledMention;
+
+  if (serverSet.has(guildKey)) {
+    serverSet.delete(guildKey);
+    enabledMention = false;
+  } else {
+    serverSet.add(guildKey);
+    enabledMention = true;
+  }
+  await setServerSet(user, serverSet);
+  return enabledMention;
 }
 
 async function commandHandler(message) {
-  const state = await toggleMention(message.author);
+  const state = await toggleMention(message.author, message.guild);
   return message.reply(`Ping warning **${state ? 'enabled' : 'disabled'}**.`);
 }
 
 async function getAffectedUsers(message) {
   const affectedUsers = message.mentions.members.map(async (user) => {
-    if (await userDB.get(user.id.toString())) {
+    const dbResult = await userDB.get(user.id.toString());
+    let serverSet;
+    try {
+      serverSet = new Set(JSON.parse(dbResult));
+    } catch (error) {
+      console.warn('Error while parsing db result', error.message);
+      console.debug(error);
+      return false;
+    }
+
+    if (serverSet.has(message.guild.id)) {
       return user;
     }
     return false;
@@ -80,7 +125,7 @@ client.on('ready', () => {
 });
 
 client.on('message', (message) => {
-  if (message.author.bot) {
+  if (message.author.bot || !message.guild) {
     return;
   }
 
