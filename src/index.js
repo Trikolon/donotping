@@ -12,6 +12,9 @@ async function getServerSet(user) {
     throw new Error('Invalid arg user');
   }
   const result = await userDB.get(user.id.toString());
+  if (!result) {
+    return new Set();
+  }
   try {
     return new Set(JSON.parse(result));
   } catch (error) {
