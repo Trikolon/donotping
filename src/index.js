@@ -8,7 +8,8 @@ const config = require('../config.json');
 let userDB;
 
 async function getServerSet(user) {
-  if (!user || !(user instanceof Discord.User)) {
+  if (!user || (!(user instanceof Discord.GuildMember)
+                && !(user instanceof Discord.User))) {
     throw new Error('Invalid arg user');
   }
   const result = await userDB.get(user.id.toString());
@@ -61,16 +62,7 @@ async function commandHandler(message) {
 
 async function getAffectedUsers(message) {
   const affectedUsers = message.mentions.members.map(async (user) => {
-    const dbResult = await userDB.get(user.id.toString());
-    let serverSet;
-    try {
-      serverSet = new Set(JSON.parse(dbResult));
-    } catch (error) {
-      console.warn('Error while parsing db result', error.message);
-      console.debug(error);
-      return false;
-    }
-
+    const serverSet = await getServerSet(user);
     if (serverSet.has(message.guild.id)) {
       return user;
     }
