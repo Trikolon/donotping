@@ -122,6 +122,9 @@ client.on('ready', () => {
       `Add this bot to a server: https://discordapp.com/oauth2/authorize?client_id=${config.api.appId}&scope=bot`,
     );
   }
+  // Print some stats
+  console.info(`Active servers: ${client.guilds.size}`);
+  console.info(`Total users (enabled and disabled): ${client.users.size}`);
 });
 
 client.on('message', (message) => {
