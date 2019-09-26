@@ -95,6 +95,11 @@ async function chatHandler(message) {
       await message.delete();
     }
   }
+
+  // Messages pings bot itself, reply with custom string defined in config
+  if (config.botPingMessage && message.mentions.users.has(client.user.id)) {
+    await message.reply(config.botPingMessage.replace('{cmdPrefix}', config.command.prefix));
+  }
 }
 
 let botToken = process.env.BOTTOKEN;

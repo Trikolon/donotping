@@ -7,6 +7,7 @@
   "command": {
     "prefix": "!tping"
   },
+  "botPingMessage": "Sure, you can ping me, but actually I'm here to discourage others from pinging **you**!\nIf you would like to enable or disable that just type `{cmdPrefix}`.",
   "action": {
     "deleteMessage": false,
     "reactEmoji": "\uD83D\uDC4E"
