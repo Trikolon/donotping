@@ -146,7 +146,8 @@ userDB.on('error', (err) => {
 
 client.login(botToken)
   .catch((error) => {
-    console.error('Error autenticating with Discord! Check your bot token.', error.message);
+    console.error('Error authenticating with Discord!Check your internet connection and bot token.',
+      error.message);
     console.debug(error);
     process.exit(1);
   });
