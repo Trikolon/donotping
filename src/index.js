@@ -1,18 +1,29 @@
+const { promisify } = require('util');
 const Discord = require('discord.js');
+const redis = require('redis');
 
-const client = new Discord.Client();
-const Keyv = require('keyv');
+const discordClient = new Discord.Client();
+const asyncRedisClient = {
+  set: null,
+  get: null,
+  del: null,
+};
 
 const config = require('../config.json');
 
-let userDB;
+function writePromisifiedClient(client, target) {
+  Object.keys(target).forEach((key) => {
+    // eslint-disable-next-line no-param-reassign
+    target[key] = promisify(client[key]).bind(client);
+  });
+}
 
 async function getServerSet(user) {
   if (!user || (!(user instanceof Discord.GuildMember)
                 && !(user instanceof Discord.User))) {
     throw new Error('Invalid arg user');
   }
-  const result = await userDB.get(user.id.toString());
+  const result = await asyncRedisClient.get(user.id.toString());
   if (!result) {
     return new Set();
   }
@@ -33,9 +44,9 @@ function setServerSet(user, serverSet) {
     throw new Error('Invalid arg serverSet');
   }
   if (serverSet.size === 0) {
-    return userDB.delete(user.id.toString());
+    return asyncRedisClient.del(user.id.toString());
   }
-  return userDB.set(user.id.toString(), JSON.stringify(Array.from(serverSet)));
+  return asyncRedisClient.set(user.id.toString(), JSON.stringify(Array.from(serverSet)));
 }
 
 async function toggleMention(user, guild) {
@@ -97,7 +108,7 @@ async function chatHandler(message) {
   }
 
   // Messages pings bot itself, reply with custom string defined in config
-  if (config.botPingMessage && message.mentions.users.has(client.user.id)) {
+  if (config.botPingMessage && message.mentions.users.has(discordClient.user.id)) {
     await message.reply(config.botPingMessage.replace('{cmdPrefix}', config.command.prefix));
   }
 }
@@ -112,22 +123,22 @@ if (!botToken) {
   process.exit(1);
 }
 
-client.on('error', (e) => console.error(e));
-client.on('warn', (e) => console.warn(e));
+discordClient.on('error', (e) => console.error(e));
+discordClient.on('warn', (e) => console.warn(e));
 
-client.on('ready', () => {
-  console.info(`Logged in as ${client.user.tag}!`);
+discordClient.on('ready', () => {
+  console.info(`Logged in as ${discordClient.user.tag}!`);
   if (config.api.appId) {
     console.info(
       `Add this bot to a server: https://discordapp.com/oauth2/authorize?client_id=${config.api.appId}&scope=bot`,
     );
   }
   // Print some stats
-  console.info(`Active servers: ${client.guilds.size}`);
-  console.info(`Total users (enabled and disabled): ${client.users.size}`);
+  console.info(`Active servers: ${discordClient.guilds.size}`);
+  console.info(`Total users (enabled and disabled): ${discordClient.users.size}`);
 });
 
-client.on('message', (message) => {
+discordClient.on('message', (message) => {
   if (message.author.bot || !message.guild) {
     return;
   }
@@ -140,14 +151,21 @@ client.on('message', (message) => {
   chatHandler(message);
 });
 
-userDB = new Keyv(config.database, { namespace: 'users' });
-userDB.on('error', (err) => {
-  console.error('Database connection error:', err);
-  process.exit(1);
+
+const redisOptions = config.redis.options;
+if (process.env.RHOST) {
+  redisOptions.host = process.env.RHOST;
+}
+const redisClient = redis.createClient(redisOptions);
+// Create redis client and promisify its methods
+writePromisifiedClient(redisClient, asyncRedisClient);
+
+redisClient.on('error', (err) => {
+  console.error('Database  error:', err);
 });
 
 
-client.login(botToken)
+discordClient.login(botToken)
   .catch((error) => {
     console.error('Error authenticating with Discord!Check your internet connection and bot token.',
       error.message);

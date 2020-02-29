@@ -3,7 +3,9 @@
     "appId": "",
     "token": ""
   },
-  "database": "sqlite://database.sqlite",
+  "redis": {
+    "options": {}
+  },
   "command": {
     "prefix": "!tping"
   },

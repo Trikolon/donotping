@@ -1,0 +1,10 @@
+database.sqlite
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+config.default.json
+.eslintrc.js
+.idea
